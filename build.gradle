@@ -10,7 +10,7 @@ buildscript {
         kotlinVersion = '1.4.32'
         mockitoVersion = '3.2.0'
         retrofitVersion = '2.9.0'
-        sonarqubeVersion = '3.2.0'
+        sonarqubeVersion = '3.3'
     }
 }
 
