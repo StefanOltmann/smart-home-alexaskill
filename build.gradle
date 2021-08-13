@@ -4,7 +4,7 @@ buildscript {
         // Must be defined here instead of "gradle.properties" because of
         // https://github.com/dependabot/dependabot-core/issues/1618
         awsLambdaJavaCore = '1.2.1'
-        detektVersion = '1.17.1'
+        detektVersion = '1.18.0'
         gitVersioningVersion = '4.2.0'
         junitVersion = '5.7.2'
         kotlinVersion = '1.4.32'
