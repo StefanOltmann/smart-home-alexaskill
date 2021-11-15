@@ -7,7 +7,7 @@ buildscript {
         detektVersion = '1.17.1'
         gitVersioningVersion = '4.2.0'
         junitVersion = '5.7.2'
-        kotlinVersion = '1.4.32'
+        kotlinVersion = '1.6.0'
         mockitoVersion = '3.2.0'
         retrofitVersion = '2.9.0'
         sonarqubeVersion = '3.3'
