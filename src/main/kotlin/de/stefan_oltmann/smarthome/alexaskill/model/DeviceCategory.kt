@@ -31,6 +31,8 @@ enum class DeviceCategory {
     /** Roller shutter */
     EXTERIOR_BLIND,
 
-    THERMOSTAT
+    THERMOSTAT,
+
+    OTHER
 
 }

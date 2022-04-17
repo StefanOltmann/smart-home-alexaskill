@@ -39,7 +39,12 @@ enum class DeviceType {
     /**
      * A heating.
      */
-    HEATING;
+    HEATING,
+
+    /**
+     * A fire or wind alarm for instance.
+     */
+    ALARM;
 
     val deviceCategory: DeviceCategory
         get() = when (this) {
@@ -47,6 +52,7 @@ enum class DeviceType {
             DIMMER -> DeviceCategory.LIGHT
             ROLLER_SHUTTER -> DeviceCategory.EXTERIOR_BLIND
             HEATING -> DeviceCategory.THERMOSTAT
+            ALARM -> DeviceCategory.OTHER
         }
 
     val deviceCapabilities: List<DeviceCapability>
@@ -55,5 +61,6 @@ enum class DeviceType {
             DIMMER -> listOf(DeviceCapability.POWER_STATE, DeviceCapability.PERCENTAGE)
             ROLLER_SHUTTER -> listOf(DeviceCapability.POWER_STATE, DeviceCapability.PERCENTAGE)
             HEATING -> listOf(DeviceCapability.THERMOSTAT)
+            ALARM -> emptyList()
         }
 }
