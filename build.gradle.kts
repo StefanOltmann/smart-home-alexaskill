@@ -72,6 +72,6 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
 
     // Unit Tests
-    testImplementation(libs.junit.jupiter)
+    testImplementation(kotlin("test"))
 
 }
