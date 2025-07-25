@@ -1,6 +1,6 @@
 /*
  * Stefans Smart Home Project
- * Copyright (C) 2021 Stefan Oltmann
+ * Copyright (C) 2025 Stefan Oltmann
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,9 @@
 
 package de.stefan_oltmann.smarthome.alexaskill.alexamodel
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Payload(
     val endpoints: List<DiscoveryEndpoint>? = null,
     val scope: Scope? = null,

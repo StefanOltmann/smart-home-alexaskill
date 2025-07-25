@@ -1,6 +1,6 @@
 /*
  * Stefans Smart Home Project
- * Copyright (C) 2021 Stefan Oltmann
+ * Copyright (C) 2025 Stefan Oltmann
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,24 +19,19 @@
 package de.stefan_oltmann.smarthome.alexaskill
 
 import com.amazonaws.services.lambda.runtime.LambdaLogger
-import com.google.gson.Gson
 import de.stefan_oltmann.smarthome.alexaskill.alexamodel.AlexaRequest
 import de.stefan_oltmann.smarthome.alexaskill.model.Device
 import de.stefan_oltmann.smarthome.alexaskill.model.DevicePowerState
 import de.stefan_oltmann.smarthome.alexaskill.model.DeviceType
 import de.stefan_oltmann.smarthome.alexaskill.network.RestApi
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
+import dev.mokkery.answering.returns
+import dev.mokkery.everySuspend
+import dev.mokkery.mock
+import dev.mokkery.verifyNoMoreCalls
+import dev.mokkery.verifySuspend
+import kotlinx.serialization.json.Json
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.verifyNoInteractions
-import org.mockito.Mockito.verifyNoMoreInteractions
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import retrofit2.Call
-import retrofit2.Response
 
 class AlexaHandlerTest {
 
@@ -75,24 +70,31 @@ class AlexaHandlerTest {
 
         val expectedResponseJson = """
             {
+              "context": null,
               "event": {
                 "header": {
                   "namespace": "Alexa",
                   "name": "ErrorResponse",
                   "payloadVersion": "3",
-                  "messageId": "MESSAGE_ID"
+                  "messageId": "MESSAGE_ID",
+                  "correlationToken": null
                 },
                 "payload": {
+                  "endpoints": null,
+                  "scope": null,
+                  "percentage": null,
+                  "targetSetpoint": null,
                   "type": "INVALID_DIRECTIVE",
                   "message": "Request is invalid."
-                }
+                },
+                "endpoint": null
               }
             }
         """.trimIndent()
 
         assertEquals(expectedResponseJson, actualResponseJson)
 
-        verifyNoInteractions(restApiMock, logger)
+        verifyNoMoreCalls(restApiMock, logger)
     }
 
     /**
@@ -134,21 +136,31 @@ class AlexaHandlerTest {
 
         val expectedResponseJson = """
             {
+              "context": null,
               "event": {
                 "header": {
                   "namespace": "Alexa.Authorization",
                   "name": "AcceptGrant.Response",
                   "payloadVersion": "3",
-                  "messageId": "MESSAGE_ID"
+                  "messageId": "MESSAGE_ID",
+                  "correlationToken": null
                 },
-                "payload": {}
+                "payload": {
+                  "endpoints": null,
+                  "scope": null,
+                  "percentage": null,
+                  "targetSetpoint": null,
+                  "type": null,
+                  "message": null
+                },
+                "endpoint": null
               }
             }
         """.trimIndent()
 
         assertEquals(expectedResponseJson, actualResponseJson)
 
-        verifyNoInteractions(restApiMock, logger)
+        verifyNoMoreCalls(restApiMock, logger)
     }
 
     /**
@@ -198,12 +210,8 @@ class AlexaHandlerTest {
             )
         )
 
-        val callMock = mock<Call<List<Device>>> {
-            on { execute() } doReturn Response.success(devices)
-        }
-
         val restApiMock = mock<RestApi> {
-            on { findAllDevices() } doReturn callMock
+            everySuspend { findAllDevices() } returns devices
         }
 
         val logger = mock<LambdaLogger> {}
@@ -216,12 +224,14 @@ class AlexaHandlerTest {
 
         val expectedResponseJson = """
             {
+              "context": null,
               "event": {
                 "header": {
                   "namespace": "Alexa.Discovery",
                   "name": "Discover.Response",
                   "payloadVersion": "3",
-                  "messageId": "MESSAGE_ID"
+                  "messageId": "MESSAGE_ID",
+                  "correlationToken": null
                 },
                 "payload": {
                   "endpoints": [
@@ -234,7 +244,8 @@ class AlexaHandlerTest {
                         {
                           "type": "AlexaInterface",
                           "interface": "Alexa",
-                          "version": "3"
+                          "version": "3",
+                          "properties": null
                         },
                         {
                           "type": "AlexaInterface",
@@ -262,7 +273,8 @@ class AlexaHandlerTest {
                         {
                           "type": "AlexaInterface",
                           "interface": "Alexa",
-                          "version": "3"
+                          "version": "3",
+                          "properties": null
                         },
                         {
                           "type": "AlexaInterface",
@@ -279,7 +291,8 @@ class AlexaHandlerTest {
                         {
                           "type": "AlexaInterface",
                           "interface": "Alexa",
-                          "version": "3"
+                          "version": "3",
+                          "properties": null
                         },
                         {
                           "type": "AlexaInterface",
@@ -307,7 +320,8 @@ class AlexaHandlerTest {
                         {
                           "type": "AlexaInterface",
                           "interface": "Alexa",
-                          "version": "3"
+                          "version": "3",
+                          "properties": null
                         },
                         {
                           "type": "AlexaInterface",
@@ -324,7 +338,8 @@ class AlexaHandlerTest {
                         {
                           "type": "AlexaInterface",
                           "interface": "Alexa",
-                          "version": "3"
+                          "version": "3",
+                          "properties": null
                         },
                         {
                           "type": "AlexaInterface",
@@ -343,8 +358,14 @@ class AlexaHandlerTest {
                         "EXTERIOR_BLIND"
                       ]
                     }
-                  ]
-                }
+                  ],
+                  "scope": null,
+                  "percentage": null,
+                  "targetSetpoint": null,
+                  "type": null,
+                  "message": null
+                },
+                "endpoint": null
               }
             }
         """.trimIndent()
@@ -355,8 +376,8 @@ class AlexaHandlerTest {
          * Verify mocks
          */
 
-        verify(restApiMock, times(1)).findAllDevices()
-        verifyNoMoreInteractions(restApiMock, logger)
+        verifySuspend { restApiMock.findAllDevices() }
+        verifyNoMoreCalls(restApiMock, logger)
     }
 
     /**
@@ -392,12 +413,13 @@ class AlexaHandlerTest {
          * Return mock data if the restApi is called.
          */
 
-        val callMock = mock<Call<Unit>> {
-            on { execute() } doReturn Response.success(null)
-        }
-
         val restApiMock = mock<RestApi> {
-            on { setDevicePowerState("my_light_switch", DevicePowerState.ON) } doReturn callMock
+            everySuspend {
+                setDevicePowerState(
+                    "my_light_switch",
+                    DevicePowerState.ON
+                )
+            } returns Unit
         }
 
         val logger = mock<LambdaLogger> {}
@@ -429,12 +451,14 @@ class AlexaHandlerTest {
                   "messageId": "MESSAGE_ID",
                   "correlationToken": "SampleValueOfCorrelationToken"
                 },
+                "payload": null,
                 "endpoint": {
                   "endpointId": "my_light_switch",
                   "scope": {
                     "type": "BearerToken",
                     "token": "SampleValueOfBearerToken"
-                  }
+                  },
+                  "cookie": null
                 }
               }
             }
@@ -446,8 +470,8 @@ class AlexaHandlerTest {
          * Verify mocks
          */
 
-        verify(restApiMock, times(1)).setDevicePowerState("my_light_switch", DevicePowerState.ON)
-        verifyNoMoreInteractions(restApiMock, logger)
+        verifySuspend { restApiMock.setDevicePowerState("my_light_switch", DevicePowerState.ON) }
+        verifyNoMoreCalls(restApiMock, logger)
     }
 
     /**
@@ -485,12 +509,8 @@ class AlexaHandlerTest {
          * Return mock data if the restApi is called.
          */
 
-        val callMock = mock<Call<Unit>> {
-            on { execute() } doReturn Response.success(null)
-        }
-
         val restApiMock = mock<RestApi> {
-            on { setDevicePercentage("my_dimmer", 66) } doReturn callMock
+            everySuspend { setDevicePercentage("my_dimmer", 66) } returns Unit
         }
 
         val logger = mock<LambdaLogger> {}
@@ -522,12 +542,14 @@ class AlexaHandlerTest {
                   "messageId": "MESSAGE_ID",
                   "correlationToken": "SampleValueOfCorrelationToken"
                 },
+                "payload": null,
                 "endpoint": {
                   "endpointId": "my_dimmer",
                   "scope": {
                     "type": "BearerToken",
                     "token": "SampleValueOfBearerToken"
-                  }
+                  },
+                  "cookie": null
                 }
               }
             }
@@ -539,8 +561,8 @@ class AlexaHandlerTest {
          * Verify mocks
          */
 
-        verify(restApiMock, times(1)).setDevicePercentage("my_dimmer", 66)
-        verifyNoMoreInteractions(restApiMock, logger)
+        verifySuspend { restApiMock.setDevicePercentage("my_dimmer", 66) }
+        verifyNoMoreCalls(restApiMock, logger)
     }
 
     /**
@@ -581,12 +603,8 @@ class AlexaHandlerTest {
          * Return mock data if the restApi is called.
          */
 
-        val callMock = mock<Call<Unit>> {
-            on { execute() } doReturn Response.success(null)
-        }
-
         val restApiMock = mock<RestApi> {
-            on { setDeviceTargetTemperature("my_heating", 25) } doReturn callMock
+            everySuspend { setDeviceTargetTemperature("my_heating", 25) } returns Unit
         }
 
         val logger = mock<LambdaLogger> {}
@@ -621,12 +639,14 @@ class AlexaHandlerTest {
                   "messageId": "MESSAGE_ID",
                   "correlationToken": "SampleValueOfCorrelationToken"
                 },
+                "payload": null,
                 "endpoint": {
                   "endpointId": "my_heating",
                   "scope": {
                     "type": "BearerToken",
                     "token": "SampleValueOfBearerToken"
-                  }
+                  },
+                  "cookie": null
                 }
               }
             }
@@ -638,15 +658,15 @@ class AlexaHandlerTest {
          * Verify mocks
          */
 
-        verify(restApiMock, times(1)).setDeviceTargetTemperature("my_heating", 25)
-        verifyNoMoreInteractions(restApiMock, logger)
+        verifySuspend { restApiMock.setDeviceTargetTemperature("my_heating", 25) }
+        verifyNoMoreCalls(restApiMock, logger)
     }
 
     /*
      * Example test to verify GSON is working
      */
     @Test
-    fun testParseAlexaRequestObectFromDiscoveryRequest() {
+    fun testParseAlexaRequestObjectFromDiscoveryRequest() {
 
         val requestJson = """
             {
@@ -667,7 +687,7 @@ class AlexaHandlerTest {
             }
         """.trimIndent()
 
-        val alexaRequest = Gson().fromJson(requestJson, AlexaRequest::class.java)
+        val alexaRequest = Json.decodeFromString<AlexaRequest>(requestJson)
 
         assertNotNull(alexaRequest, "Parsing into object failed.")
 
@@ -689,6 +709,6 @@ class AlexaHandlerTest {
         assertNotNull(directive.payload)
         assertNotNull(directive.payload.scope)
         assertEquals("BearerToken", directive.payload.scope!!.type)
-        assertEquals("access-token-from-skill", directive.payload.scope!!.token)
+        assertEquals("access-token-from-skill", directive.payload.scope.token)
     }
 }

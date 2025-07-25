@@ -1,6 +1,6 @@
 /*
  * Stefans Smart Home Project
- * Copyright (C) 2021 Stefan Oltmann
+ * Copyright (C) 2025 Stefan Oltmann
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,11 +18,14 @@
 
 package de.stefan_oltmann.smarthome.alexaskill.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * This is useful to have a nice icon in the Alexa App and nothing else.
  *
  * This is Alexa specific and determined from the {@link DeviceType}.
  */
+@Serializable
 enum class DeviceCategory {
 
     /** Lights */

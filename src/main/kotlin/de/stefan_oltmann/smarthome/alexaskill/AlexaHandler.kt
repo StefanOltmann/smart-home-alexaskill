@@ -1,6 +1,6 @@
 /*
  * Stefans Smart Home Project
- * Copyright (C) 2021 Stefan Oltmann
+ * Copyright (C) 2025 Stefan Oltmann
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,34 +19,22 @@
 package de.stefan_oltmann.smarthome.alexaskill
 
 import com.amazonaws.services.lambda.runtime.LambdaLogger
-import com.google.gson.GsonBuilder
-import de.stefan_oltmann.smarthome.alexaskill.alexamodel.AlexaRequest
-import de.stefan_oltmann.smarthome.alexaskill.alexamodel.AlexaResponse
-import de.stefan_oltmann.smarthome.alexaskill.alexamodel.Capability
-import de.stefan_oltmann.smarthome.alexaskill.alexamodel.Context
-import de.stefan_oltmann.smarthome.alexaskill.alexamodel.ContextProperties
-import de.stefan_oltmann.smarthome.alexaskill.alexamodel.Directive
-import de.stefan_oltmann.smarthome.alexaskill.alexamodel.DiscoveryEndpoint
-import de.stefan_oltmann.smarthome.alexaskill.alexamodel.Endpoint
-import de.stefan_oltmann.smarthome.alexaskill.alexamodel.Event
-import de.stefan_oltmann.smarthome.alexaskill.alexamodel.Header
-import de.stefan_oltmann.smarthome.alexaskill.alexamodel.Payload
-import de.stefan_oltmann.smarthome.alexaskill.alexamodel.Scope
-import de.stefan_oltmann.smarthome.alexaskill.alexamodel.TargetSetpoint
+import de.stefan_oltmann.smarthome.alexaskill.alexamodel.*
 import de.stefan_oltmann.smarthome.alexaskill.model.DeviceCapability
 import de.stefan_oltmann.smarthome.alexaskill.model.DevicePowerState
 import de.stefan_oltmann.smarthome.alexaskill.network.RestApi
 import de.stefan_oltmann.smarthome.alexaskill.network.RestApiClientFactory
-import retrofit2.Response
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import java.io.InputStream
 import java.io.OutputStream
-import java.nio.charset.StandardCharsets
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Scanner
-import java.util.TimeZone
-import java.util.UUID
 import kotlin.math.roundToInt
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * The main class handling all the logic.
@@ -57,23 +45,19 @@ import kotlin.math.roundToInt
 class AlexaHandler {
 
     /**
-     * GSON instance that creates pretty JSON.
-     *
-     * This is good for unit tests and log statements as well.
-     */
-    private val gson by lazy {
-
-        val builder = GsonBuilder()
-        builder.setPrettyPrinting()
-        builder.create()
-    }
-
-    /**
-     * Modifies behaviour to help us with unit tests.
+     * Modifies behavior to help us with unit tests.
      *
      * Should never be 'true' in production.
      */
     var unitTesting = false
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private val json = Json {
+        prettyPrint = true
+        prettyPrintIndent = "  "
+        encodeDefaults = true
+        ignoreUnknownKeys = true
+    }
 
     /**
      * This method is called by the AWS Lambda.
@@ -93,12 +77,12 @@ class AlexaHandler {
         /* For e.g. "https://myserver.com:50000/" (without quotes) */
         val apiUrl = System.getenv("API_URL")
 
-        /* Auth Code send to the backend API for authorization */
+        /* This code is send to the backend for authorization. */
         val authCode = System.getenv("AUTH_CODE")
 
         val restApi = RestApiClientFactory.createRestApiClient(apiUrl, authCode)
 
-        val requestJson = getRequestString(inputStream)
+        val requestJson = inputStream.bufferedReader().use { it.readText() }
 
         logger.log("Request: $requestJson")
 
@@ -106,27 +90,27 @@ class AlexaHandler {
 
         logger.log("Response: $responseJson")
 
-        outputStream.write(responseJson.toByteArray(StandardCharsets.UTF_8))
+        outputStream.write(responseJson.encodeToByteArray())
     }
 
     /**
-     * This method takes in the request as JSON string and returns the response as JSON string.
+     * This method takes in the request as a JSON string and returns the response as a JSON string.
      *
      * It delegates to handleRequestObject() which then works on the object level.
      */
     fun handleRequestJson(requestJson: String, restApi: RestApi, logger: LambdaLogger): String {
 
-        val alexaRequest = gson.fromJson(requestJson, AlexaRequest::class.java)
+        val alexaRequest = json.decodeFromString<AlexaRequest>(requestJson)
 
-        val alexaResponse = handleRequestObject(alexaRequest, restApi, logger)
+        val alexaResponse = runBlocking { handleRequestObject(alexaRequest, restApi, logger) }
 
-        return gson.toJson(alexaResponse)
+        return json.encodeToString(alexaResponse)
     }
 
     /**
-     * Finally on this level we only work with real objects and keep the JSON stuff out of the logic.
+     * Finally, on this level we only work with real objects and keep the JSON stuff out of the logic.
      */
-    private fun handleRequestObject(
+    private suspend fun handleRequestObject(
         alexaRequest: AlexaRequest,
         restApi: RestApi,
         logger: LambdaLogger
@@ -206,19 +190,22 @@ class AlexaHandler {
     /**
      * Calls the backend API for the devices and creates a Discovery response.
      */
-    private fun createDeviceDiscoveryResponse(
+    private suspend fun createDeviceDiscoveryResponse(
         restApi: RestApi,
         logger: LambdaLogger
     ): AlexaResponse {
 
         /* Fetch all the devices from the REST API */
-        val devicesResponse = restApi.findAllDevices().execute()
+        val devices = try {
 
-        /* Return ASAP if a problem occurred. */
-        if (!devicesResponse.isSuccessful)
+            restApi.findAllDevices()
+
+        } catch (ex: Exception) {
+
+            logger.log("Error fetching devices: $ex")
+
             return createErrorResponse()
-
-        val devices = devicesResponse.body()
+        }
 
         /**
          * It's very helpful for debugging to see which devices are actually returned by the backend API.
@@ -232,7 +219,7 @@ class AlexaHandler {
          * Of course there are a lot more, but we go with the most common used: Switches & Dimmers.
          *
          * We define them here as we don't want to create more objects in memory
-         * as needed and these can be reused for all devices.
+         * as needed, and these can be reused for all devices.
          */
 
         val alexaCapability = Capability(
@@ -259,11 +246,11 @@ class AlexaHandler {
          */
         val endpoints = mutableListOf<DiscoveryEndpoint>()
 
-        devices?.forEach { device ->
+        devices.forEach { device ->
 
             /*
-             * Devices can have many capabilities and you can mix them like you need it.
-             */
+                 * Devices can have many capabilities and you can mix them like you need it.
+                 */
             val capabilities = mutableListOf<Capability>()
 
             for (capability in device.capabilities) {
@@ -305,13 +292,13 @@ class AlexaHandler {
         )
     }
 
-    private fun executePowerControllerDirectiveAndCreateResponse(
+    private suspend fun executePowerControllerDirectiveAndCreateResponse(
         directive: Directive,
         restApi: RestApi,
         logger: LambdaLogger
     ): AlexaResponse {
 
-        val endpointId = directive.endpoint.endpointId
+        val endpointId = directive.endpoint!!.endpointId
 
         val powerState =
             if (directive.header.name == "TurnOn")
@@ -338,21 +325,22 @@ class AlexaHandler {
                     ContextProperties(
                         namespace = Header.NAMESPACE_POWER_CONTROLLER,
                         name = "powerState",
-                        value = powerState.name,
-                        timeOfSample = createCurrentTimeString()
+                        value = JsonPrimitive(powerState.name),
+                        timeOfSample = createCurrentTimeString(),
+                        uncertaintyInMilliseconds = 200
                     )
                 )
             )
         )
     }
 
-    private fun executePercentageControllerDirectiveAndCreateResponse(
+    private suspend fun executePercentageControllerDirectiveAndCreateResponse(
         directive: Directive,
         restApi: RestApi,
         logger: LambdaLogger
     ): AlexaResponse {
 
-        val endpointId = directive.endpoint.endpointId
+        val endpointId = directive.endpoint!!.endpointId
 
         val percentage = directive.payload.percentage!!
 
@@ -377,21 +365,22 @@ class AlexaHandler {
                     ContextProperties(
                         namespace = Header.NAMESPACE_PERCENTAGE_CONTROLLER,
                         name = "percentage",
-                        value = percentage.toString(),
-                        timeOfSample = createCurrentTimeString()
+                        value = JsonPrimitive(percentage.toString()),
+                        timeOfSample = createCurrentTimeString(),
+                        uncertaintyInMilliseconds = 200
                     )
                 )
             )
         )
     }
 
-    private fun executeThermostatControllerDirectiveAndCreateResponse(
+    private suspend fun executeThermostatControllerDirectiveAndCreateResponse(
         directive: Directive,
         restApi: RestApi,
         logger: LambdaLogger
     ): AlexaResponse {
 
-        val endpointId = directive.endpoint.endpointId
+        val endpointId = directive.endpoint!!.endpointId
 
         val targetTemperature = directive.payload.targetSetpoint!!.value
 
@@ -417,11 +406,14 @@ class AlexaHandler {
                     ContextProperties(
                         namespace = Header.NAMESPACE_THERMOSTAT_CONTROLLER,
                         name = "targetSetpoint",
-                        value = TargetSetpoint(
-                            value = targetTemperature,
-                            scale = "CELSIUS"
+                        value = Json.encodeToJsonElement(
+                            TargetSetpoint.serializer(), TargetSetpoint(
+                                value = targetTemperature,
+                                scale = "CELSIUS"
+                            )
                         ),
-                        timeOfSample = createCurrentTimeString()
+                        timeOfSample = createCurrentTimeString(),
+                        uncertaintyInMilliseconds = 200
                     )
                 )
             )
@@ -433,84 +425,80 @@ class AlexaHandler {
      */
 
     /**
-     * Calls the backend API to set the power state of specified endpoint.
+     * Calls the backend API to set the power state of a specified endpoint.
      */
-    private fun executePowerStateCall(
+    private suspend fun executePowerStateCall(
         endpointId: String,
         devicePowerState: DevicePowerState,
         restApi: RestApi,
         logger: LambdaLogger
     ): Boolean {
 
-        val call = restApi.setDevicePowerState(endpointId, devicePowerState)
+        try {
 
-        if (!unitTesting)
-            logger.log(EXECUTE_CALL_MESSAGE + call.request().url())
+            restApi.setDevicePowerState(endpointId, devicePowerState)
 
-        val response: Response<*> = call.execute()
+        } catch (ex: Exception) {
 
-        if (!unitTesting)
-            logger.log(CALL_RESULT_MESSAGE + response.code() + " - " + response.message())
+            logger.log("Error setting power state: $ex")
 
-        return response.isSuccessful
+            return false
+        }
+
+        return true
     }
 
     /**
-     * Calls the backend API to set the percentage of specified endpoint.
+     * Calls the backend API to set the percentage of a specified endpoint.
      */
-    private fun executePercentageCall(
+    private suspend fun executePercentageCall(
         endpointId: String,
         percentage: Int,
         restApi: RestApi,
         logger: LambdaLogger
     ): Boolean {
 
-        val call = restApi.setDevicePercentage(endpointId, percentage)
+        try {
 
-        if (!unitTesting)
-            logger.log(EXECUTE_CALL_MESSAGE + call.request().url())
+            restApi.setDevicePercentage(endpointId, percentage)
 
-        val response: Response<*> = call.execute()
+        } catch (ex: Exception) {
 
-        if (!unitTesting)
-            logger.log(CALL_RESULT_MESSAGE + response.code() + " - " + response.message())
+            logger.log("Error setting percentage: $ex")
 
-        return response.isSuccessful
+            return false
+        }
+
+        return true
     }
 
     /**
      * Calls the backend API to set the target temperature of specified endpoint.
      */
-    private fun executeTargetTemperatureCall(
+    private suspend fun executeTargetTemperatureCall(
         endpointId: String,
         targetTemperature: Double,
         restApi: RestApi,
         logger: LambdaLogger
     ): Boolean {
 
-        val call = restApi.setDeviceTargetTemperature(endpointId, targetTemperature.roundToInt())
+        try {
 
-        if (!unitTesting)
-            logger.log(EXECUTE_CALL_MESSAGE + call.request().url())
+            restApi.setDeviceTargetTemperature(endpointId, targetTemperature.roundToInt())
 
-        val response: Response<*> = call.execute()
+        } catch (ex: Exception) {
 
-        if (!unitTesting)
-            logger.log(CALL_RESULT_MESSAGE + response.code() + " - " + response.message())
+            logger.log("Error setting target temperature: $ex")
 
-        return response.isSuccessful
+            return false
+        }
+
+        return true
     }
 
     /*
      * Helper methods
      */
-
-    private fun getRequestString(inputStream: InputStream): String {
-
-        val scanner = Scanner(inputStream).useDelimiter("\\A")
-
-        return if (scanner.hasNext()) scanner.next() else ""
-    }
 
     private fun createErrorResponse(): AlexaResponse {
 
@@ -529,21 +517,21 @@ class AlexaHandler {
     }
 
     /**
-     * Every message needs a unique UUID as identifier.
+     * Every message needs a unique UUID as an identifier.
      *
      * This method creates that. Expect we are in unitTesting mode.
      */
+    @OptIn(ExperimentalUuidApi::class)
     private fun createMessageId() =
-        if (unitTesting) UNIT_TEST_MESSAGE_ID else UUID.randomUUID().toString()
+        if (unitTesting) UNIT_TEST_MESSAGE_ID else Uuid.random().toString()
 
+    @OptIn(ExperimentalTime::class)
     private fun createCurrentTimeString(): String {
 
-        val timestamp = if (unitTesting) UNIT_TEST_TIMESTAMP else Date().time
+        if (unitTesting)
+            return UNIT_TEST_TIMESTAMP
 
-        val simpleDataFormat = SimpleDateFormat(ContextProperties.DATE_FORMAT_PATTERN)
-        simpleDataFormat.timeZone = TimeZone.getTimeZone(ContextProperties.DATE_FORMAT_TIMEZONE)
-
-        return simpleDataFormat.format(timestamp)
+        return Clock.System.now().toString()
     }
 
     companion object {
@@ -563,9 +551,7 @@ class AlexaHandler {
         /**
          * Constants for the Unit Test fake messages
          */
-        const val EXECUTE_CALL_MESSAGE = "Execute call: "
-        const val CALL_RESULT_MESSAGE = "Call result: "
         const val UNIT_TEST_MESSAGE_ID = "MESSAGE_ID"
-        const val UNIT_TEST_TIMESTAMP = 1577885820000
+        const val UNIT_TEST_TIMESTAMP = "2020-01-01T13:37:00.000Z"
     }
 }

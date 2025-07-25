@@ -1,6 +1,6 @@
 /*
  * Stefans Smart Home Project
- * Copyright (C) 2021 Stefan Oltmann
+ * Copyright (C) 2025 Stefan Oltmann
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,11 +18,14 @@
 
 package de.stefan_oltmann.smarthome.alexaskill.model
 
+import kotlinx.serialization.Serializable
+
 /*
  * A device like a light switch, a dimmer or a roller shutter.
  *
  * Alexa calls these "endpoints".
  */
+@Serializable
 data class Device(
     val id: String,
     val name: String,

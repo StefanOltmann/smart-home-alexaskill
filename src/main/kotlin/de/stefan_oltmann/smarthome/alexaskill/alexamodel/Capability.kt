@@ -1,6 +1,6 @@
 /*
  * Stefans Smart Home Project
- * Copyright (C) 2021 Stefan Oltmann
+ * Copyright (C) 2025 Stefan Oltmann
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,15 +18,17 @@
 
 package de.stefan_oltmann.smarthome.alexaskill.alexamodel
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 /**
  * A capability is something a device can do like be turned off and on (power control)
  * as well as set to a specific value (percentage control) which applies to dimmers and roller shutters.
  */
+@Serializable
 data class Capability(
     val type: String = "AlexaInterface",
-    @SerializedName("interface")
+    @SerialName("interface")
     val interfaceName: String,
     val version: String = Header.PAYLOAD_VERSION,
     val properties: CapabilityProperties? = null

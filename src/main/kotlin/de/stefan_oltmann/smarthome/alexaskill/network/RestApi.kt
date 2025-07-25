@@ -1,6 +1,6 @@
 /*
  * Stefans Smart Home Project
- * Copyright (C) 2021 Stefan Oltmann
+ * Copyright (C) 2025 Stefan Oltmann
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,11 +18,10 @@
 
 package de.stefan_oltmann.smarthome.alexaskill.network
 
+import de.jensklingenberg.ktorfit.http.GET
+import de.jensklingenberg.ktorfit.http.Path
 import de.stefan_oltmann.smarthome.alexaskill.model.Device
 import de.stefan_oltmann.smarthome.alexaskill.model.DevicePowerState
-import retrofit2.Call
-import retrofit2.http.GET
-import retrofit2.http.Path
 
 interface RestApi {
 
@@ -30,33 +29,33 @@ interface RestApi {
      * Returns all devices for device discovery.
      */
     @GET("/devices")
-    fun findAllDevices(): Call<List<Device>>
+    suspend fun findAllDevices(): List<Device>
 
     /**
      * Turns a device (for e.g. a light) on and off.
      */
     @GET("/device/{deviceId}/set/power-state/value/{powerState}")
-    fun setDevicePowerState(
+    suspend fun setDevicePowerState(
         @Path("deviceId") deviceId: String,
         @Path("powerState") powerState: DevicePowerState
-    ): Call<Unit>
+    )
 
     /**
      * Sets a percentage value to a device. For example a dimmer or a roller shutter.
      */
     @GET("/device/{deviceId}/set/percentage/value/{percentage}")
-    fun setDevicePercentage(
+    suspend fun setDevicePercentage(
         @Path("deviceId") deviceId: String,
         @Path("percentage") percentage: Int
-    ): Call<Unit>
+    )
 
     /**
      * Sets a target temperature value to a device. For example a heating.
      */
     @GET("/device/{deviceId}/set/target-temperature/value/{targetTemperature}")
-    fun setDeviceTargetTemperature(
+    suspend fun setDeviceTargetTemperature(
         @Path("deviceId") deviceId: String,
         @Path("targetTemperature") targetTemperature: Int
-    ): Call<Unit>
+    )
 
 }

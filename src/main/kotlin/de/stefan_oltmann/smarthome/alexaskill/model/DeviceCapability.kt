@@ -1,6 +1,6 @@
 /*
  * Stefans Smart Home Project
- * Copyright (C) 2021 Stefan Oltmann
+ * Copyright (C) 2025 Stefan Oltmann
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,11 +18,14 @@
 
 package de.stefan_oltmann.smarthome.alexaskill.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * This represents what can be done with the device.
  *
  * This is Alexa specific and determined from the {@link DeviceType}.
  */
+@Serializable
 enum class DeviceCapability {
 
     /** Can be turned on and off */
