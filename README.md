@@ -1,7 +1,9 @@
 # Stefans Smart Home Alexa Skill
 
-[![CI](https://github.com/StefanOltmann/smart-home-alexaskill/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/StefanOltmann/smart-home-alexaskill/actions/workflows/ci.yml)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+![Kotlin](https://img.shields.io/badge/kotlin-2.2.0-blue.svg?logo=kotlin)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+![JVM](https://img.shields.io/badge/-JVM-gray.svg?style=flat)
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-gray?&logo=GitHub-Sponsors&logoColor=EA4AAA)](https://github.com/sponsors/StefanOltmann)
 
 ## Prerequisites
 
